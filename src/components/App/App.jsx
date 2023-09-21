@@ -6,9 +6,24 @@ const TURNS = {
   O: '⚪'
 }
 
+const WINNER_COMBOS = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [6, 4, 2]
+];
+
 export const App = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [turn, setTurn] = useState(TURNS.X);
+  // null -> No hay ganador
+  // false -> Empate
+  // X u O -> para ganador
+  const [winner, setWinner] = useState(null);
 
   const updateBoard = (index) => {
     if (board[index]) return;
@@ -19,6 +34,34 @@ export const App = () => {
 
     const newTurn = turn === TURNS.X ? TURNS.O : TURNS.X;
     setTurn(newTurn);
+
+    const newWinner = checkWinner(newBoard);
+
+    if (newWinner) {
+      setWinner(newWinner);
+    }
+  }
+
+  const checkWinner = (boardToCheck) => {
+    for (const combo of WINNER_COMBOS) {
+      const [a, b, c] = combo;
+
+      if (
+        boardToCheck[a] &&
+        boardToCheck[a] === boardToCheck[b]
+        && boardToCheck[b] === boardToCheck[c]
+      ) {
+        return boardToCheck[a];
+      }
+    }
+
+    return null;
+  }
+
+  const resetGame = () => {
+    setBoard(Array(9).fill(null));
+    setTurn(TURNS.X);
+    setWinner(null);
   }
 
   return (
@@ -43,6 +86,24 @@ export const App = () => {
           <span>{TURNS.O}</span>
         </Square>
       </section>
+
+      {
+        winner !== null
+          ? <section className='winner'>
+            <div className='text'>
+              <h2>Ganó - Empate</h2>
+
+              <header className='win'>
+                {winner && <Square>{winner}</Square>}
+              </header>
+
+              <footer>
+                <button onClick={resetGame}>Empezar de nuevo</button>
+              </footer>
+            </div>
+          </section>
+          : null
+      }
     </main>
   )
 }
