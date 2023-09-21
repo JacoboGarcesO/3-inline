@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import './App.css';
-
-const TURNS = {
-  X: '❌',
-  O: '⚪'
-}
-
-const WINNER_COMBOS = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 3, 6],
-  [1, 4, 7],
-  [2, 5, 8],
-  [0, 4, 8],
-  [6, 4, 2]
-];
+import { checkWinner, checkEndGame } from '../../logic/board';
+import { TURNS } from '../../constants';
+import { Square } from '../Square/Square';
+import { WinnerModal } from '../WinnerModal/WinnerModal';
+import { saveGameToStorage, removeStorage } from '../../logic/storage';
 
 export const App = () => {
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [turn, setTurn] = useState(TURNS.X);
+  const [board, setBoard] = useState(() => {
+    const boardFromStorage = window.localStorage.getItem('board');
+    if (boardFromStorage) return JSON.parse(boardFromStorage);
+
+    return Array(9).fill(null);
+  });
+
+  const [turn, setTurn] = useState(() => {
+    const turnStorage = window.localStorage.getItem('turn');
+    return turnStorage || TURNS.X
+  });
+
   // null -> No hay ganador
   // false -> Empate
   // X u O -> para ganador
@@ -35,39 +34,31 @@ export const App = () => {
     const newTurn = turn === TURNS.X ? TURNS.O : TURNS.X;
     setTurn(newTurn);
 
+    saveGameToStorage({
+      board: newBoard,
+      turn: newTurn,
+    });
+
     const newWinner = checkWinner(newBoard);
 
     if (newWinner) {
       setWinner(newWinner);
+    } else if (checkEndGame(newBoard)) {
+      setWinner(false);
     }
-  }
-
-  const checkWinner = (boardToCheck) => {
-    for (const combo of WINNER_COMBOS) {
-      const [a, b, c] = combo;
-
-      if (
-        boardToCheck[a] &&
-        boardToCheck[a] === boardToCheck[b]
-        && boardToCheck[b] === boardToCheck[c]
-      ) {
-        return boardToCheck[a];
-      }
-    }
-
-    return null;
   }
 
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setTurn(TURNS.X);
     setWinner(null);
+    removeStorage();
   }
 
   return (
     <main className="board">
       <h1>3 En línea</h1>
-
+      <button onClick={resetGame}>Reiniciar Juego</button>
       <section className="game">
         {
           board.map((elemento, index) => {
@@ -87,33 +78,7 @@ export const App = () => {
         </Square>
       </section>
 
-      {
-        winner !== null
-          ? <section className='winner'>
-            <div className='text'>
-              <h2>Ganó - Empate</h2>
-
-              <header className='win'>
-                {winner && <Square>{winner}</Square>}
-              </header>
-
-              <footer>
-                <button onClick={resetGame}>Empezar de nuevo</button>
-              </footer>
-            </div>
-          </section>
-          : null
-      }
+      <WinnerModal winner={winner} resetGame={resetGame} />
     </main>
   )
-}
-
-const Square = ({ children, index, updateBoard, isSelected }) => {
-  const classes = isSelected ? 'square is-selected' : 'square';
-
-  const handleClick = () => {
-    updateBoard(index);
-  }
-
-  return <div className={classes} onClick={handleClick}>{children}</div>
 }
